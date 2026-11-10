@@ -1,0 +1,109 @@
+# ==============================================================================
+# SeatSync AI - Root Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Sensitive Credentials (STRICT - NEVER COMMIT)
+# ------------------------------------------------------------------------------
+.env
+*.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!*.env.example
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+
+# ------------------------------------------------------------------------------
+# 2. Database Dumps & Backups
+# Exclude ad-hoc SQL dumps and backups, while strictly preserving Flyway migrations
+# ------------------------------------------------------------------------------
+backups/
+*.sql
+*.dump
+*.tar.gz
+!backend/src/main/resources/db/migration/*.sql
+!backend/src/test/resources/**/*.sql
+
+# ------------------------------------------------------------------------------
+# 3. Build Outputs, Binaries & Dependencies
+# ------------------------------------------------------------------------------
+target/
+build/
+dist/
+out/
+bin/
+*.class
+*.jar
+*.war
+*.ear
+*.tsbuildinfo
+node_modules/
+.pnpm-store/
+
+# ------------------------------------------------------------------------------
+# 4. Logs & Diagnostics
+# ------------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------------------------
+# 5. IDE & Code Editor Configurations
+# ------------------------------------------------------------------------------
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
+.springBeans
+.factorypath
+.apt_generated/
+.sts4-userId
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+# ------------------------------------------------------------------------------
+# 6. Operating System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ------------------------------------------------------------------------------
+# 7. Temporary / Scratch Scripts
+# ------------------------------------------------------------------------------
+scratch/
+tmp/
+temp/
+*.tmp

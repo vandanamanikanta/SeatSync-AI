@@ -1,0 +1,52 @@
+# Production Profile Configuration for SeatSync AI
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/seatsync_db?useSSL=true&requireSSL=false&serverTimezone=UTC&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      pool-name: SeatSyncProdHikariCP
+      maximum-pool-size: 30
+      minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+    hibernate:
+      ddl-auto: validate
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: 3000ms
+      embedded:
+        enabled: false # Strictly disabled in production; requires externally managed Redis
+
+  ai:
+    model:
+      chat: ${SPRING_AI_MODEL_CHAT:none}
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-2.5-flash}
+
+logging:
+  level:
+    root: INFO
+    com.seatsync: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+

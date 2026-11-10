@@ -1,0 +1,129 @@
+services:
+  # ============================================================================
+  # 1. MySQL 8 Database Service
+  # ============================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: seatsync-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required in .env}
+      MYSQL_DATABASE: seatsync_db
+    ports:
+      # Map to host port 3307 by default to avoid conflict with existing local MySQL
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    volumes:
+      - seatsync_mysql_data:/var/lib/mysql
+    networks:
+      - seatsync-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ============================================================================
+  # 2. Redis 7 Cache & Distributed Concurrency Coordination Service
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: seatsync-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      # Map to host port 6380 by default to avoid conflict with existing local Redis
+      - "${REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - seatsync_redis_data:/data
+    networks:
+      - seatsync-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================================
+  # 3. SeatSync AI Backend Service (Spring Boot 3 + Java 21)
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: seatsync-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8081
+      # Database connection to MySQL container inside private Docker network
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/seatsync_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required in .env}
+      # Redis connection to Redis container inside private Docker network
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_EMBEDDED_ENABLED: "false"
+      # Secure Gemini AI Configuration
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required in .env}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      # Security & CORS settings
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in .env}
+      CORS_ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000
+    ports:
+      - "8081:8081"
+    networks:
+      - seatsync-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q 'UP' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 40s
+
+  # ============================================================================
+  # 4. SeatSync AI Frontend Service (React + Vite served via NGINX)
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: seatsync-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "5173:80"
+    networks:
+      - seatsync-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+# ==============================================================================
+# Persistent Storage Volumes
+# ==============================================================================
+volumes:
+  seatsync_mysql_data:
+    driver: local
+  seatsync_redis_data:
+    driver: local
+
+# ==============================================================================
+# Private Isolated Docker Bridge Network
+# ==============================================================================
+networks:
+  seatsync-network:
+    driver: bridge
+
